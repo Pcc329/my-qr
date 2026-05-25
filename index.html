@@ -1,20 +1,562 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-TW">
 <head>
-  <meta charset="UTF-8">
-  <title>轉址中...</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QR 管理後台</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;800&family=DM+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --surface2: #1a1a1a;
+    --border: #2a2a2a;
+    --accent: #c8ff00;
+    --accent2: #ff6b35;
+    --text: #f0f0f0;
+    --muted: #666;
+    --danger: #ff3b3b;
+  }
+
+  body {
+    font-family: 'Syne', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 20px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 100;
+  }
+  .logo {
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--accent); }
+  .header-note {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    text-align: right;
+  }
+
+  /* MAIN LAYOUT */
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 48px 40px;
+  }
+
+  .page-title {
+    font-size: 42px;
+    font-weight: 800;
+    letter-spacing: -2px;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .page-title em {
+    color: var(--accent);
+    font-style: normal;
+  }
+  .page-sub {
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    margin-bottom: 48px;
+  }
+
+  /* CREATE FORM */
+  .create-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px 32px;
+    margin-bottom: 48px;
+  }
+  .create-box h2 {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 200px 120px;
+    gap: 12px;
+    align-items: end;
+  }
+  .field label {
+    display: block;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+    margin-bottom: 6px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .field input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .field input:focus {
+    border-color: var(--accent);
+  }
+  .field input::placeholder { color: var(--muted); }
+  .btn-create {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    white-space: nowrap;
+    height: 45px;
+  }
+  .btn-create:hover { opacity: 0.85; }
+  .btn-create:active { transform: scale(0.97); }
+
+  /* CARDS GRID */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .section-title {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .count-badge {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+  }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .card:hover { border-color: #3a3a3a; }
+
+  .card-top {
+    padding: 20px 20px 16px;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .qr-wrap {
+    flex-shrink: 0;
+    width: 90px;
+    height: 90px;
+    background: #fff;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    cursor: pointer;
+    position: relative;
+  }
+  .qr-wrap:hover::after {
+    content: '下載';
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 8px;
+  }
+  .qr-wrap canvas, .qr-wrap img { width: 80px !important; height: 80px !important; }
+
+  .card-info { flex: 1; min-width: 0; }
+  .card-name {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .card-slug {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .card-url {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+  .card-scans {
+    margin-top: 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .card-scans strong { color: var(--accent2); }
+
+  .card-bottom {
+    border-top: 1px solid var(--border);
+    padding: 12px 20px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .card-bottom input {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    outline: none;
+  }
+  .card-bottom input:focus { border-color: var(--accent); }
+  .btn-save {
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s, color 0.2s;
+  }
+  .btn-save:hover { background: var(--accent); color: #000; }
+  .btn-delete {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .btn-delete:hover { border-color: var(--danger); color: var(--danger); }
+
+  /* EMPTY STATE */
+  .empty {
+    grid-column: 1/-1;
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--muted);
+  }
+  .empty .big { font-size: 48px; margin-bottom: 12px; }
+  .empty p { font-family: 'DM Mono', monospace; font-size: 13px; }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 32px;
+    right: 32px;
+    background: var(--accent);
+    color: #000;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 13px;
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 999;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  /* HOW TO BOX */
+  .howto {
+    margin-top: 60px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px 32px;
+  }
+  .howto h3 {
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+  .steps { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; }
+  .step { display: flex; gap: 12px; }
+  .step-num {
+    width: 28px; height: 28px;
+    background: var(--surface2);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+  .step-text { font-size: 13px; color: var(--muted); line-height: 1.6; }
+  .step-text strong { color: var(--text); font-weight: 600; }
+
+  @media (max-width: 700px) {
+    main { padding: 32px 20px; }
+    header { padding: 16px 20px; }
+    .form-row { grid-template-columns: 1fr; }
+    .steps { grid-template-columns: 1fr; }
+    .page-title { font-size: 30px; }
+  }
+</style>
 </head>
 <body>
-  <p>轉址中，請稍候...</p>
-  <script>
-    fetch('./config.json?t=' + Date.now())
-      .then(r => r.json())
-      .then(data => {
-        window.location.replace(data.url);
-      })
-      .catch(() => {
-        document.body.innerText = '無法讀取設定，請稍後再試。';
-      });
-  </script>
+
+<header>
+  <div class="logo">QR<span>.</span>Hub</div>
+  <div class="header-note">資料儲存於瀏覽器本機<br>重要連結請備份 JSON</div>
+</header>
+
+<main>
+  <h1 class="page-title">動態 <em>QR</em><br>管理後台</h1>
+  <p class="page-sub">// 掃描同一個 QR Code，目標網址隨時可改</p>
+
+  <div class="create-box">
+    <h2>新增 QR Code</h2>
+    <div class="form-row">
+      <div class="field">
+        <label>名稱（備註用）</label>
+        <input type="text" id="inp-name" placeholder="例：展覽活動頁" />
+      </div>
+      <div class="field">
+        <label>短代碼（網址識別）</label>
+        <input type="text" id="inp-slug" placeholder="例：event2025" />
+      </div>
+      <button class="btn-create" onclick="createQR()">＋ 建立</button>
+    </div>
+    <div class="field" style="margin-top:12px">
+      <label>目標網址</label>
+      <input type="url" id="inp-url" placeholder="https://..." />
+    </div>
+  </div>
+
+  <div class="section-header">
+    <span class="section-title">已建立的 QR Code</span>
+    <span class="count-badge" id="count-badge">0 個</span>
+  </div>
+
+  <div class="cards" id="cards"></div>
+
+  <div class="howto">
+    <h3>使用說明</h3>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text"><strong>建立 QR Code</strong><br>填入名稱、短代碼與目標網址，按「建立」</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text"><strong>下載並印刷</strong><br>點擊 QR Code 圖片下載，貼到任何地方</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-text"><strong>隨時改目標</strong><br>回來修改下方網址欄位，QR Code 不用重印</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── 資料管理 ─────────────────────────────────
+const STORAGE_KEY = 'qrhub_codes';
+
+function load() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+  catch { return []; }
+}
+function save(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+// ── 取得本頁 base URL（用於生成轉址連結）─────
+function baseURL() {
+  const u = window.location.href;
+  return u.substring(0, u.lastIndexOf('/') + 1);
+}
+function redirectURL(slug) {
+  return baseURL() + 'r.html?id=' + encodeURIComponent(slug);
+}
+
+// ── Toast ─────────────────────────────────────
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── 建立 ──────────────────────────────────────
+function createQR() {
+  const name = document.getElementById('inp-name').value.trim();
+  const slug = document.getElementById('inp-slug').value.trim().replace(/[^a-zA-Z0-9_-]/g, '');
+  const url  = document.getElementById('inp-url').value.trim();
+
+  if (!name) { toast('請輸入名稱'); return; }
+  if (!slug) { toast('請輸入短代碼（英數字）'); return; }
+  if (!url)  { toast('請輸入目標網址'); return; }
+
+  const data = load();
+  if (data.find(d => d.slug === slug)) { toast('短代碼已存在，請換一個'); return; }
+
+  data.push({ id: Date.now(), name, slug, url, scans: 0, created: new Date().toLocaleDateString('zh-TW') });
+  save(data);
+
+  document.getElementById('inp-name').value = '';
+  document.getElementById('inp-slug').value = '';
+  document.getElementById('inp-url').value  = '';
+
+  render();
+  toast('✓ 建立成功');
+}
+
+// ── 更新 URL ──────────────────────────────────
+function updateURL(slug) {
+  const inp = document.getElementById('url-' + slug);
+  const newURL = inp.value.trim();
+  if (!newURL) { toast('請輸入網址'); return; }
+
+  const data = load();
+  const item = data.find(d => d.slug === slug);
+  if (item) { item.url = newURL; save(data); render(); toast('✓ 網址已更新'); }
+}
+
+// ── 刪除 ──────────────────────────────────────
+function deleteQR(slug) {
+  if (!confirm('確定刪除「' + slug + '」？')) return;
+  const data = load().filter(d => d.slug !== slug);
+  save(data);
+  render();
+  toast('已刪除');
+}
+
+// ── 下載 QR ───────────────────────────────────
+function downloadQR(slug) {
+  const canvas = document.querySelector('#qr-' + slug + ' canvas');
+  if (!canvas) return;
+  const a = document.createElement('a');
+  a.download = 'qr-' + slug + '.png';
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+}
+
+// ── 渲染 ──────────────────────────────────────
+function render() {
+  const data = load();
+  const container = document.getElementById('cards');
+  const badge = document.getElementById('count-badge');
+  badge.textContent = data.length + ' 個';
+
+  if (data.length === 0) {
+    container.innerHTML = `
+      <div class="empty">
+        <div class="big">📭</div>
+        <p>還沒有 QR Code，從上方新增第一個吧</p>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = data.map(item => `
+    <div class="card" id="card-${item.slug}">
+      <div class="card-top">
+        <div class="qr-wrap" id="qr-${item.slug}" onclick="downloadQR('${item.slug}')" title="點擊下載"></div>
+        <div class="card-info">
+          <div class="card-name">${item.name}</div>
+          <div class="card-slug">/${item.slug}</div>
+          <div class="card-url">${item.url}</div>
+          <div class="card-scans">建立於 ${item.created}</div>
+        </div>
+      </div>
+      <div class="card-bottom">
+        <input id="url-${item.slug}" type="url" value="${item.url}" placeholder="輸入新的目標網址" />
+        <button class="btn-save" onclick="updateURL('${item.slug}')">更新</button>
+        <button class="btn-delete" onclick="deleteQR('${item.slug}')" title="刪除">✕</button>
+      </div>
+    </div>
+  `).join('');
+
+  // 生成 QR Code
+  data.forEach(item => {
+    const wrap = document.getElementById('qr-' + item.slug);
+    if (!wrap) return;
+    wrap.innerHTML = '';
+    new QRCode(wrap, {
+      text: redirectURL(item.slug),
+      width: 80, height: 80,
+      colorDark: '#000000',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  });
+}
+
+// ── Enter 鍵快速建立 ──────────────────────────
+document.getElementById('inp-url').addEventListener('keydown', e => {
+  if (e.key === 'Enter') createQR();
+});
+
+render();
+</script>
 </body>
 </html>
