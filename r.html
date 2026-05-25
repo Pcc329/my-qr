@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>轉址中...</title>
+<style>
+  body {
+    margin: 0;
+    background: #0a0a0a;
+    color: #f0f0f0;
+    font-family: 'Courier New', monospace;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .dot {
+    width: 8px; height: 8px;
+    background: #c8ff00;
+    border-radius: 50%;
+    animation: blink 0.8s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+  p { color: #555; font-size: 13px; }
+  a { color: #c8ff00; }
+</style>
+</head>
+<body>
+<div class="dot"></div>
+<p id="msg">轉址中...</p>
+
+<script>
+// 從 URL 取得 slug
+const params = new URLSearchParams(window.location.search);
+const slug = params.get('id');
+
+if (!slug) {
+  document.getElementById('msg').textContent = '❌ 無效的連結';
+} else {
+  // 讀取後台儲存的資料
+  const STORAGE_KEY = 'qrhub_codes';
+  let data = [];
+  try { data = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch {}
+
+  const item = data.find(d => d.slug === slug);
+
+  if (item && item.url) {
+    // 更新掃描次數
+    item.scans = (item.scans || 0) + 1;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+
+    // 跳轉
+    window.location.replace(item.url);
+  } else {
+    document.getElementById('msg').innerHTML =
+      '❌ 找不到「' + slug + '」的設定<br><br>' +
+      '<a href="index.html">← 回到管理後台</a>';
+  }
+}
+</script>
+</body>
+</html>
