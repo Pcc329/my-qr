@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>轉址中...</title>
+</head>
+<body>
+  <p>轉址中，請稍候...</p>
+  <script>
+    fetch('./config.json?t=' + Date.now())
+      .then(r => r.json())
+      .then(data => {
+        window.location.replace(data.url);
+      })
+      .catch(() => {
+        document.body.innerText = '無法讀取設定，請稍後再試。';
+      });
+  </script>
+</body>
+</html>
